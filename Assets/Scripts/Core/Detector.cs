@@ -5,13 +5,13 @@ using UnityEngine;
 public class Detector : MonoBehaviour
 {
     [SerializeField] private float _scanSpeed = 5f;
-    [SerializeField] private float _scaleZ = 0.1f;
     [SerializeField] private float _scanTime = 3f;
+    [SerializeField] private RaycastHandler _raycastHandler;
 
     private Vector3 _defaultScale;
     private bool _isScanning = false;
 
-    public static event Action<Loot> LootFound;
+    public event Action<Loot> LootFound;
 
     private void Start()
     {
@@ -20,12 +20,25 @@ public class Detector : MonoBehaviour
 
     private void OnEnable()
     {
-        InputControler.OnBaseClicked += StartCoroutineScale;
+        if (_raycastHandler != null)
+            _raycastHandler.OnBaseClicked += StartCoroutineScale;
     }
 
     private void OnDisable()
     {
-        InputControler.OnBaseClicked -= StartCoroutineScale;
+        if (_raycastHandler != null)
+            _raycastHandler.OnBaseClicked -= StartCoroutineScale;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        Loot loot = other.GetComponent<Loot>();
+
+        if (loot != null)
+        {
+            loot.Reveal();
+            LootFound?.Invoke(loot);
+        }
     }
 
     public void ResetScale()
@@ -54,15 +67,5 @@ public class Detector : MonoBehaviour
 
         _isScanning = false;
         ResetScale();
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        Loot loot = other.GetComponent<Loot>();
-        if (loot != null)
-        {
-            loot.Reveal();
-            LootFound?.Invoke(loot);
-        }
     }
 }

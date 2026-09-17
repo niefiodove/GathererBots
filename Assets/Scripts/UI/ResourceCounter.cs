@@ -1,12 +1,12 @@
 using UnityEngine;
 using TMPro;
 using System;
-using UnityEngine.UI;
 
 public class ResourceCounter : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI _counterText;
     [SerializeField] private string _startText = "0";
+    [SerializeField] private Base _base;
 
     private void Start()
     {
@@ -16,12 +16,14 @@ public class ResourceCounter : MonoBehaviour
 
     private void OnEnable()
     {
-        Base.ResourceCountChanged += UpdateCounterText;
+        if (_base != null)
+            _base.ResourceCountChanged += UpdateCounterText;
     }
 
     private void OnDisable()
     {
-        Base.ResourceCountChanged -= UpdateCounterText;
+        if (_base != null)
+            _base.ResourceCountChanged -= UpdateCounterText;
     }
 
     private void UpdateCounterText(int currentCount)

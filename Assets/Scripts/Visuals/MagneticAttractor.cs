@@ -9,30 +9,26 @@ public class MagneticAttractor : MonoBehaviour
     private void Awake()
     {
         if (_magnetParticle != null)
-        {
             _magnetParticle.Stop();
-        }
     }
 
     public void Activate()
     {
         if (_magnetParticle != null && !_magnetParticle.isPlaying)
-        {
             _magnetParticle.Play();
-        }
     }
 
     public void Deactivate()
     {
         if (_magnetParticle != null && _magnetParticle.isPlaying)
-        {
             _magnetParticle.Stop();
-        }
     }
 
     public void SetAttractMode(bool isAttracting)
     {
-        if (_magnetParticle == null) return;
+        if (_magnetParticle == null)
+            return;
+
         var vel = _magnetParticle.velocityOverLifetime;
        
         if (vel.enabled)
