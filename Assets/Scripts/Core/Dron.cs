@@ -13,8 +13,13 @@ public class Dron : MonoBehaviour
     [SerializeField] private Vector3 _capturedLootPosition = new Vector3(0, 0, -1.3f);
     [SerializeField] private MagneticAttractor _magnet;
 
+    private const float StoppedVelocitySqrThreshold = 0.01f;
+    private const float ReachedLootDistanceSqrThreshold = 0.01f;
+    private const float RotationSnapThresholdDefrees = 2f;
+    private const float ApproachStoppingDistance = 0.5f;
+
     private DronState _currentState = DronState.Idle;
-    private NavMeshAgent _agent;
+    private NavMeshAgent _navMeshAgent;
     private Base _homeBase;
     private Loot _carryingLoot;
     private Transform _spawnPoint;
@@ -27,12 +32,12 @@ public class Dron : MonoBehaviour
 
     private void Awake()
     {
-        _agent = GetComponent<NavMeshAgent>();
+        _navMeshAgent = GetComponent<NavMeshAgent>();
 
-        if (_agent != null) 
-            _agent.speed = _speed;
+        if (_navMeshAgent != null)
+            _navMeshAgent.speed = _speed;
 
-        if (_magnet == null) 
+        if (_magnet == null)
             _magnet = GetComponentInChildren<MagneticAttractor>();
 
         _initialPosition = transform.position;
@@ -43,13 +48,31 @@ public class Dron : MonoBehaviour
     {
         switch (_currentState)
         {
-            case DronState.Idle: break;
-            case DronState.MovingToLoot: UpdateMovingToLoot(); break;
-            case DronState.TurningAtLoot: UpdateTurningAtLoot(); break;
-            case DronState.ReturningToBase: UpdateReturningToBase(); break;
-            case DronState.Parking: UpdateParking(); break;
-            case DronState.TurningInPlace: UpdateTurningInPlace(); break;
-            case DronState.Delivering: break;
+            case DronState.Idle:
+                break;
+
+            case DronState.MovingToLoot:
+                UpdateMovingToLoot();
+                break;
+
+            case DronState.TurningAtLoot:
+                UpdateTurningAtLoot();
+                break;
+
+            case DronState.ReturningToBase:
+                UpdateReturningToBase();
+                break;
+
+            case DronState.Parking:
+                UpdateParking();
+                break;
+
+            case DronState.TurningInPlace:
+                UpdateTurningInPlace();
+                break;
+
+            case DronState.Delivering:
+                break;
         }
     }
 
@@ -61,35 +84,38 @@ public class Dron : MonoBehaviour
 
     public void GoToLoot(Loot loot)
     {
-        if (_agent == null || loot == null) return;
+        if (_navMeshAgent == null || loot == null) return;
         _carryingLoot = loot;
-        _agent.stoppingDistance = _lootStoppingDistance;
-        _agent.SetDestination(loot.transform.position);
-        _agent.enabled = true;
-        _agent.isStopped = false;
+        _navMeshAgent.stoppingDistance = _lootStoppingDistance;
+        _navMeshAgent.SetDestination(loot.transform.position);
+        _navMeshAgent.enabled = true;
+        _navMeshAgent.isStopped = false;
         _currentState = DronState.MovingToLoot;
     }
 
     private void UpdateMovingToLoot()
     {
-        if (_agent.remainingDistance <= _agent.stoppingDistance && _agent.velocity.sqrMagnitude < 0.01f)
+        if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance && _navMeshAgent.velocity.sqrMagnitude < StoppedVelocitySqrThreshold)
             _currentState = DronState.TurningAtLoot;
     }
 
     private void UpdateTurningAtLoot()
     {
         Vector3 directionAwayFromLoot = (transform.position - _carryingLoot.transform.position);
-        if (directionAwayFromLoot.sqrMagnitude < 0.01f)
+        
+        if (directionAwayFromLoot.sqrMagnitude < ReachedLootDistanceSqrThreshold)
         {
             PickupLoot();
             ReturnToSpawnPoint();
             return;
         }
-        Quaternion targetRot = Quaternion.LookRotation(directionAwayFromLoot.normalized);
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * _rotationSpeed);
-        if (Quaternion.Angle(transform.rotation, targetRot) < 2f)
+
+        Quaternion targetRotation = Quaternion.LookRotation(directionAwayFromLoot.normalized);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * _rotationSpeed);
+        
+        if (Quaternion.Angle(transform.rotation, targetRotation) < RotationSnapThresholdDefrees)
         {
-            transform.rotation = targetRot;
+            transform.rotation = targetRotation;
             PickupLoot();
             ReturnToSpawnPoint();
         }
@@ -97,26 +123,26 @@ public class Dron : MonoBehaviour
 
     private void UpdateReturningToBase()
     {
-        if (_agent.remainingDistance <= _agent.stoppingDistance && _agent.velocity.sqrMagnitude < 0.01f)
+        if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance && _navMeshAgent.velocity.sqrMagnitude < StoppedVelocitySqrThreshold)
         {
-            _agent.stoppingDistance = _parkingEpsilon;
-            _agent.SetDestination(_initialPosition);
+            _navMeshAgent.stoppingDistance = _parkingEpsilon;
+            _navMeshAgent.SetDestination(_initialPosition);
             _currentState = DronState.Parking;
         }
     }
 
     private void UpdateParking()
     {
-        if (_agent.remainingDistance <= _agent.stoppingDistance && _agent.velocity.sqrMagnitude < 0.01f)
+        if (_navMeshAgent.remainingDistance <= _navMeshAgent.stoppingDistance && _navMeshAgent.velocity.sqrMagnitude < 0.01f)
         {
-            _agent.enabled = false;
+            _navMeshAgent.enabled = false;
             _currentState = DronState.TurningInPlace;
         }
     }
 
     private void UpdateTurningInPlace()
     {
-        if (Quaternion.Angle(transform.rotation, _initialRotation) < 2f)
+        if (Quaternion.Angle(transform.rotation, _initialRotation) < RotationSnapThresholdDefrees)
         {
             transform.rotation = _initialRotation;
             transform.position = _initialPosition;
@@ -127,6 +153,7 @@ public class Dron : MonoBehaviour
         {
             transform.rotation = Quaternion.Slerp(transform.rotation, _initialRotation, Time.deltaTime * _rotationSpeed);
         }
+
         transform.position = new Vector3(transform.position.x, _initialPosition.y, transform.position.z);
     }
 
@@ -138,18 +165,24 @@ public class Dron : MonoBehaviour
             _carryingLoot.transform.localPosition = _capturedLootPosition;
             _carryingLoot.transform.localRotation = Quaternion.identity;
             _carryingLoot.PrepareForPickup();
+
+            _carryingLoot.DeliveryFinished += CompleteDelivery;
+
             _magnet.Activate();
             _magnet.SetAttractMode(true);
         }
     }
 
+
     private void ReturnToSpawnPoint()
     {
-        if (_spawnPoint == null) return;
-        _agent.stoppingDistance = 0.5f;
-        _agent.SetDestination(_approachPoint);
-        _agent.isStopped = false;
-        _agent.enabled = true;
+        if (_spawnPoint == null)
+            return;
+
+        _navMeshAgent.stoppingDistance = ApproachStoppingDistance;
+        _navMeshAgent.SetDestination(_approachPoint);
+        _navMeshAgent.isStopped = false;
+        _navMeshAgent.enabled = true;
         _currentState = DronState.ReturningToBase;
     }
 
@@ -160,20 +193,24 @@ public class Dron : MonoBehaviour
             _magnet.SetAttractMode(false);
             _homeBase.ResourceDelivered(_carryingLoot);
             _carryingLoot.transform.SetParent(_homeBase.transform);
-            _carryingLoot.StartDeliveryAnimation(_homeBase.Center, _deliveryDuration, CompleteDelivery);
+
+            _carryingLoot.StartDeliveryAnimation(_homeBase.Center, _deliveryDuration);
         }
         else
         {
-            CompleteDelivery();
+            CompleteDelivery(null);
         }
     }
 
-    private void CompleteDelivery()
+    private void CompleteDelivery(Loot loot)
     {
+        if (_carryingLoot != null)
+            _carryingLoot.DeliveryFinished -= CompleteDelivery;
+
         _carryingLoot = null;
         _magnet.Deactivate();
-        _agent.enabled = true;
-        _agent.isStopped = false;
+        _navMeshAgent.enabled = true;
+        _navMeshAgent.isStopped = false;
         _currentState = DronState.Idle;
         DroneReturned?.Invoke(this);
     }

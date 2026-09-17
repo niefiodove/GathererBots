@@ -10,8 +10,7 @@ public class ResourceCounter : MonoBehaviour
 
     private void Start()
     {
-        if (_counterText != null)
-            _counterText.text = _startText;
+        _counterText.text = _startText;
     }
 
     private void OnEnable()

@@ -6,7 +6,7 @@ public class RaycastHandler : MonoBehaviour
     [SerializeField] private InputControler _inputControler;
     [SerializeField] private Camera _camera;
 
-    public event Action OnBaseClicked;
+    public event Action BaseClicked;
 
     private void Awake()
     {
@@ -16,13 +16,13 @@ public class RaycastHandler : MonoBehaviour
     private void OnEnable()
     {
         if (_inputControler != null)
-            _inputControler.OnMouseClicked += HandleMouseClicked;
+            _inputControler.MouseClicked += HandleMouseClicked;
     }
 
     private void OnDisable()
     {
         if (_inputControler != null)
-            _inputControler.OnMouseClicked -= HandleMouseClicked;
+            _inputControler.MouseClicked -= HandleMouseClicked;
     }
 
     private void HandleMouseClicked(Vector2 screenPosition)
@@ -37,7 +37,7 @@ public class RaycastHandler : MonoBehaviour
             Base targetBase = hit.collider.GetComponentInParent<Base>();
 
             if (targetBase != null)
-                OnBaseClicked?.Invoke();
+                BaseClicked?.Invoke();
         }
     }
 }

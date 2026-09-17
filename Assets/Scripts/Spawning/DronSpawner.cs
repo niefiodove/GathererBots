@@ -19,9 +19,7 @@ public class DronSpawner : Spawner<Dron>
         _droneParkings = new Transform[parkings.Length];
         
         for (int i = 0; i < parkings.Length; i++)
-        {
             _droneParkings[i] = parkings[i].transform;
-        }
     }
 
     private void SpawnDrons()
@@ -29,14 +27,12 @@ public class DronSpawner : Spawner<Dron>
         int count = Mathf.Min(_initialQuantityDrons, _droneParkings.Length);
         
         for (int i = 0; i < count; i++)
-        {
             CreateDron(_droneParkings[i]);
-        }
     }
 
     private void CreateDron(Transform parking)
     {
-        Dron dron = Instantiate(_prefab, parking.position, parking.rotation);
+        Dron dron = Instantiate(Prefab, parking.position, parking.rotation);
 
         dron.SetSpawnPoint(parking);
         _base.RegisterDron(dron);

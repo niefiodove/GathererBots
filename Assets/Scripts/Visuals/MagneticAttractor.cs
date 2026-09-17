@@ -29,9 +29,9 @@ public class MagneticAttractor : MonoBehaviour
         if (_magnetParticle == null)
             return;
 
-        var vel = _magnetParticle.velocityOverLifetime;
+        var velocityOverLifetime = _magnetParticle.velocityOverLifetime;
        
-        if (vel.enabled)
-            vel.z = isAttracting ? _attractSpeed : _repelSpeed;
+        if (velocityOverLifetime.enabled)
+            velocityOverLifetime.z = isAttracting ? _attractSpeed : _repelSpeed;
     }
 }

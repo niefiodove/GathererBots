@@ -3,62 +3,62 @@ using System.Collections.Generic;
 
 public abstract class Spawner<T> : MonoBehaviour where T : Component
 {
-    [SerializeField] protected T _prefab;
-    [SerializeField] protected int _initialPoolSize = 5;
-    [SerializeField] protected int _maxPoolSize = 10;
+    [SerializeField] protected T Prefab;
+    [SerializeField] protected int InitialPoolSize = 5;
+    [SerializeField] protected int MaxPoolSize = 10;
 
-    protected Queue<T> _objectPool = new Queue<T>();
-    protected int _totalObjectsCreated = 0;
+    protected Queue<T> ObjectPool = new Queue<T>();
+    protected int TotalObjectsCreated = 0;
 
     protected virtual void Awake()
     {
         InitializePool();
     }
 
-    public void ReturnToPool(T objToReturn)
+    public void ReturnToPool(T objectToReturn)
     {
-        if (objToReturn == null)
+        if (objectToReturn == null)
             return;
 
-        if (objToReturn.gameObject.activeSelf)
-            objToReturn.gameObject.SetActive(false);
+        if (objectToReturn.gameObject.activeSelf)
+            objectToReturn.gameObject.SetActive(false);
 
-        _objectPool.Enqueue(objToReturn);
+        ObjectPool.Enqueue(objectToReturn);
     }
 
     protected void InitializePool()
     {
-        int sizeToCreate = _initialPoolSize;
-        if (_maxPoolSize > 0 && _initialPoolSize > _maxPoolSize)
-            sizeToCreate = _maxPoolSize;
+        int sizeToCreate = InitialPoolSize;
+        if (MaxPoolSize > 0 && InitialPoolSize > MaxPoolSize)
+            sizeToCreate = MaxPoolSize;
 
         for (int i = 0; i < sizeToCreate; i++)
         {
-            T obj = InstantiateObject();
-            obj.gameObject.SetActive(false);
-            _objectPool.Enqueue(obj);
-            _totalObjectsCreated++;
+            T spawnedObject = InstantiateObject();
+            spawnedObject.gameObject.SetActive(false);
+            ObjectPool.Enqueue(spawnedObject);
+            TotalObjectsCreated++;
         }
     }
 
     protected T GetFromPool()
     {
-        if (_objectPool.Count > 0)
+        if (ObjectPool.Count > 0)
         {
-            return _objectPool.Dequeue();
+            return ObjectPool.Dequeue();
         }
         else
         {
-            if (_maxPoolSize > 0 && _totalObjectsCreated >= _maxPoolSize)
+            if (MaxPoolSize > 0 && TotalObjectsCreated >= MaxPoolSize)
                 return null;
 
-            _totalObjectsCreated++;
+            TotalObjectsCreated++;
             return InstantiateObject();
         }
     }
 
     private T InstantiateObject()
     {
-        return Instantiate(_prefab);
+        return Instantiate(Prefab);
     }
 }

@@ -32,7 +32,9 @@ public class Base : MonoBehaviour
     public void RegisterDron(Dron dron)
     {
         dron.Initialize(this);
-        if (!_availableDrons.Contains(dron)) _availableDrons.Add(dron);
+
+        if (!_availableDrons.Contains(dron)) 
+            _availableDrons.Add(dron);
         
         dron.DroneReturned += OnDronReturned;
     }
@@ -48,7 +50,9 @@ public class Base : MonoBehaviour
 
     private void OnLootFound(Loot loot)
     {
-        if (_trackedLoot.Contains(loot)) return;
+        if (_trackedLoot.Contains(loot)) 
+            return;
+
         _trackedLoot.Add(loot);
         _lootQueue.Enqueue(loot);
         TryAssignLootToFreeDrones();
@@ -69,7 +73,9 @@ public class Base : MonoBehaviour
         {
             Loot nextLoot = _lootQueue.Dequeue();
             _trackedLoot.Remove(nextLoot);
-            if (nextLoot == null) continue;
+
+            if (nextLoot == null) 
+                continue;
             
             Dron freeDron = _availableDrons[0];
             _availableDrons.RemoveAt(0);

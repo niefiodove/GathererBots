@@ -16,18 +16,20 @@ public class DetectorParticle : MonoBehaviour
     private void OnEnable()
     {
         if (_raycastHandler != null)
-            _raycastHandler.OnBaseClicked += StartParticle;
+            _raycastHandler.BaseClicked += StartParticle;
     }
 
     private void OnDisable()
     {
         if (_raycastHandler != null)
-            _raycastHandler.OnBaseClicked -= StartParticle;
+            _raycastHandler.BaseClicked -= StartParticle;
     }
 
     private void StartParticle()
     {
-        if (_particleSystem.isPlaying) return;
+        if (_particleSystem.isPlaying)
+            return;
+
         _particleSystem.Play();
     }
 }

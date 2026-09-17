@@ -42,7 +42,7 @@ public class LootSpawner : Spawner<Loot>
             {
                 loot.transform.position = spawnPosition;
                 loot.transform.rotation = Quaternion.identity;
-                loot.OnDeliveryFinished += HandleDeliveryFinished;
+                loot.DeliveryFinished += HandleDeliveryFinished;
                 loot.gameObject.SetActive(true);
             }
         }
@@ -50,7 +50,7 @@ public class LootSpawner : Spawner<Loot>
 
     private void HandleDeliveryFinished(Loot loot)
     {
-        loot.OnDeliveryFinished -= HandleDeliveryFinished;
+        loot.DeliveryFinished -= HandleDeliveryFinished;
         loot.Deactivate();
         ReturnToPool(loot);
     }

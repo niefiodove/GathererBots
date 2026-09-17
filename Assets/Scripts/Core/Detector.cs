@@ -21,13 +21,13 @@ public class Detector : MonoBehaviour
     private void OnEnable()
     {
         if (_raycastHandler != null)
-            _raycastHandler.OnBaseClicked += StartCoroutineScale;
+            _raycastHandler.BaseClicked += StartCoroutineScale;
     }
 
     private void OnDisable()
     {
         if (_raycastHandler != null)
-            _raycastHandler.OnBaseClicked -= StartCoroutineScale;
+            _raycastHandler.BaseClicked -= StartCoroutineScale;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -48,7 +48,9 @@ public class Detector : MonoBehaviour
 
     private void StartCoroutineScale()
     {
-        if (_isScanning) return;
+        if (_isScanning) 
+            return;
+
         StartCoroutine(StartScale());
     }
 
