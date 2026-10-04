@@ -10,7 +10,7 @@ public class Loot : MonoBehaviour
     [SerializeField] private LootMover _mover;
 
     public event Action<Loot> DeliveryFinished;
-
+    public bool IsRevealed { get; private set; } = false;
     private Coroutine _fadeCoroutine;
 
     private void Awake()
@@ -19,17 +19,17 @@ public class Loot : MonoBehaviour
         _physics = GetComponent<LootPhysics>();
         _color = GetComponent<LootColor>();
         _mover = GetComponent<LootMover>();
-
         _mover.MovementFinished += HandleMovementFinished;
     }
 
     private void OnDestroy()
     {
-            _mover.MovementFinished -= HandleMovementFinished;
+        _mover.MovementFinished -= HandleMovementFinished;
     }
 
     public void Reveal()
     {
+        IsRevealed = true;
         _visual.Show();
         _physics.SetKinematic(false);
         _physics.EnableComponents(true);
@@ -68,6 +68,7 @@ public class Loot : MonoBehaviour
 
     public void Deactivate()
     {
+        IsRevealed = false;
         _mover.StopMoving();
 
         if (_fadeCoroutine != null)
@@ -81,7 +82,6 @@ public class Loot : MonoBehaviour
         _physics.SetKinematic(false);
         _physics.EnableComponents(true);
         _color.ResetAlpha();
-
         gameObject.SetActive(false);
     }
 }

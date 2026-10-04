@@ -6,5 +6,7 @@ public enum DronState
     ReturningToBase,
     Parking,
     TurningInPlace,
-    Delivering
+    Delivering,
+    MovingToFlag,
+    BuildingBase
 }

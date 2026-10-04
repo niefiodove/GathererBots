@@ -3,13 +3,13 @@ using System.Collections;
 
 public class LootSpawner : Spawner<Loot>
 {
-    [SerializeField] private Transform _baseObject;
     [SerializeField] private BoxCollider _groundCube;
     [SerializeField] private float _spawnInterval = 2f;
     [SerializeField] private float _minDistanceFromBase = 1f;
     [SerializeField] private float _maxDistanceFromBase = 20f;
     [SerializeField] private float _spawnAreaPadding = 0.2f;
     [SerializeField] private int _maxSpawnAttempts = 50;
+    [SerializeField] private SceneContext _sceneContext;
 
     private WaitForSeconds _spawnTime;
 
@@ -37,7 +37,7 @@ public class LootSpawner : Spawner<Loot>
         if (spawnPosition != Vector3.zero)
         {
             Loot loot = GetFromPool();
-
+            
             if (loot != null)
             {
                 loot.transform.position = spawnPosition;
@@ -60,12 +60,36 @@ public class LootSpawner : Spawner<Loot>
         for (int i = 0; i < _maxSpawnAttempts; i++)
         {
             Vector3 randomPoint = GetRandomPointOnGround();
-            float distanceToBase = Vector3.Distance(randomPoint, _baseObject.position);
-            
-            if (distanceToBase >= _minDistanceFromBase && distanceToBase <= _maxDistanceFromBase)
+
+            if (IsDistanceValid(randomPoint))
                 return randomPoint;
         }
+
         return Vector3.zero;
+    }
+
+    private bool IsDistanceValid(Vector3 point)
+    {
+        if (_sceneContext == null)
+            return false;
+
+        var bases = _sceneContext.RegisteredBases;
+
+        if (bases.Count == 0)
+            return true;
+
+        foreach (var baseObj in bases)
+        {
+            if (baseObj == null)
+                continue;
+
+            float distanceToBase = Vector3.Distance(point, baseObj.transform.position);
+
+            if (distanceToBase < _minDistanceFromBase || distanceToBase > _maxDistanceFromBase)
+                return false;
+        }
+
+        return true;
     }
 
     private Vector3 GetRandomPointOnGround()

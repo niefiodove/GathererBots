@@ -6,12 +6,21 @@ public class Detector : MonoBehaviour
 {
     [SerializeField] private float _scanSpeed = 5f;
     [SerializeField] private float _scanTime = 3f;
-    [SerializeField] private RaycastHandler _raycastHandler;
+    [SerializeField] private Base _ownerBase;
 
+    private RaycastHandler _raycastHandler;
     private Vector3 _defaultScale;
     private bool _isScanning = false;
 
     public event Action<Loot> LootFound;
+
+    private void Awake()
+    {
+        SceneContext context = FindFirstObjectByType<SceneContext>();
+
+        if (context != null)
+            _raycastHandler = context.RaycastHandler;
+    }
 
     private void Start()
     {
@@ -21,13 +30,21 @@ public class Detector : MonoBehaviour
     private void OnEnable()
     {
         if (_raycastHandler != null)
-            _raycastHandler.BaseClicked += StartCoroutineScale;
+            _raycastHandler.BaseClicked += OnBaseClicked;
     }
 
     private void OnDisable()
     {
         if (_raycastHandler != null)
-            _raycastHandler.BaseClicked -= StartCoroutineScale;
+            _raycastHandler.BaseClicked -= OnBaseClicked;
+    }
+
+    private void OnBaseClicked(Base clickedBase)
+    {
+        if (clickedBase != _ownerBase)
+            return;
+
+        StartCoroutineScale();
     }
 
     private void OnTriggerEnter(Collider other)

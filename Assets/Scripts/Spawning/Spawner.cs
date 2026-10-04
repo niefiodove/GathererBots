@@ -29,6 +29,7 @@ public abstract class Spawner<T> : MonoBehaviour where T : Component
     protected void InitializePool()
     {
         int sizeToCreate = InitialPoolSize;
+
         if (MaxPoolSize > 0 && InitialPoolSize > MaxPoolSize)
             sizeToCreate = MaxPoolSize;
 
