@@ -6,13 +6,12 @@ public class DronSpawner : Spawner<Dron>
 {
     [SerializeField] private int _initialQuantityDrons = 3;
     [SerializeField] private Base _base;
-
     [SerializeField] private DronHologram _hologramPrefab;
     [SerializeField] private float _hologramFadeDuration = 3f;
 
     private Transform[] _droneParkings;
+    private bool[] _isParkingOccupied;
     private WaitForSeconds _waitHologramFadeDuration;
-    private int _nextParkingIndex = 0;
     private int _spawnedDronesCount = 0;
     private bool _skipInitialSpawn = false;
 
@@ -26,27 +25,6 @@ public class DronSpawner : Spawner<Dron>
     {
         if (!_skipInitialSpawn)
             SpawnDrons();
-    }
-
-    private void InitializeParkings()
-    {
-        DronParking[] parkings = GetComponentsInChildren<DronParking>();
-        _droneParkings = new Transform[parkings.Length];
-
-        for (int i = 0; i < parkings.Length; i++)
-            _droneParkings[i] = parkings[i].transform;
-    }
-
-    private void SpawnDrons()
-    {
-        int count = Mathf.Min(_initialQuantityDrons, _droneParkings.Length);
-
-        for (int i = 0; i < count; i++)
-        {
-            CreateDron(_droneParkings[i]);
-            _spawnedDronesCount++;
-            _nextParkingIndex++;
-        }
     }
 
     public bool CanSpawnDrone()
@@ -67,21 +45,61 @@ public class DronSpawner : Spawner<Dron>
         StartCoroutine(SpawnDroneWithHologramRoutine(parking));
     }
 
-    public void SkipInitialSpawn()
-    {
-        _skipInitialSpawn = true;
-    }
+    public void SkipInitialSpawn() => _skipInitialSpawn = true;
 
     public void AssignParkingToExistingDrone(Dron dron)
     {
-        if (_nextParkingIndex >= _droneParkings.Length)
+        Transform parking = GetNextParking();
+
+        if (parking == null)
             return;
 
-        Transform parking = _droneParkings[_nextParkingIndex++];
         dron.SetSpawnPoint(parking);
         dron.transform.position = parking.position;
         dron.transform.rotation = parking.rotation;
         _spawnedDronesCount++;
+    }
+
+    public void ReleaseParking(Transform parkingToRelease)
+    {
+        for (int i = 0; i < _droneParkings.Length; i++)
+        {
+            if (_droneParkings[i] == parkingToRelease)
+            {
+                _isParkingOccupied[i] = false;
+                _spawnedDronesCount = Mathf.Max(0, _spawnedDronesCount - 1);
+                return;
+            }
+        }
+    }
+
+    private void InitializeParkings()
+    {
+        DronParking[] parkings = GetComponentsInChildren<DronParking>();
+        _droneParkings = new Transform[parkings.Length];
+        _isParkingOccupied = new bool[parkings.Length];
+
+        for (int i = 0; i < parkings.Length; i++)
+        {
+            _droneParkings[i] = parkings[i].transform;
+            _isParkingOccupied[i] = false;
+        }
+    }
+
+    private void SpawnDrons()
+    {
+        int count = Mathf.Min(_initialQuantityDrons, _droneParkings.Length);
+
+        for (int i = 0; i < count; i++)
+        {
+            Transform parking = GetNextParking();
+
+            if (parking != null)
+            {
+                CreateDron(parking);
+                _spawnedDronesCount++;
+            }
+        }
     }
 
     private IEnumerator SpawnDroneWithHologramRoutine(Transform parking)
@@ -95,9 +113,14 @@ public class DronSpawner : Spawner<Dron>
 
     private Transform GetNextParking()
     {
-        if (_nextParkingIndex < _droneParkings.Length)
-            return _droneParkings[_nextParkingIndex++];
-
+        for (int i = 0; i < _isParkingOccupied.Length; i++)
+        {
+            if (!_isParkingOccupied[i])
+            {
+                _isParkingOccupied[i] = true;
+                return _droneParkings[i];
+            }
+        }
         return null;
     }
 

@@ -11,34 +11,12 @@ public class GhostBase : MonoBehaviour
     private BoxCollider[] _childColliders;
     private MaterialPropertyBlock _block;
     private int _colorId;
-
     private Bounds _groundBounds;
     private float _groundY;
-    private Base _currentBase;
-    private bool _isValid;
+
     private Vector3 _targetPosition;
 
-    public bool IsValid => _isValid;
-
-    public void Initialize(Bounds groundBounds, Base currentBase)
-    {
-        _groundBounds = groundBounds;
-        _groundY = groundBounds.max.y;
-        _currentBase = currentBase;
-
-        _renderers = GetComponentsInChildren<Renderer>();
-        _childColliders = GetComponentsInChildren<BoxCollider>();
-
-        _block = new MaterialPropertyBlock();
-        _colorId = Shader.PropertyToID("_BaseColor");
-
-        _targetPosition = transform.position;
-    }
-
-    public void SetTargetPosition(Vector3 groundHitPoint)
-    {
-        _targetPosition = new Vector3(groundHitPoint.x, _groundY + _yOffset, groundHitPoint.z);
-    }
+    public bool IsValid { get; private set; }
 
     private void LateUpdate()
     {
@@ -51,8 +29,25 @@ public class GhostBase : MonoBehaviour
             transform.position = _targetPosition;
         }
 
-        _isValid = CheckValidity();
-        UpdateVisual(_isValid);
+        IsValid = CheckValidity();
+        UpdateVisual(IsValid);
+    }
+
+    public void Initialize(Bounds groundBounds)
+    {
+        _groundBounds = groundBounds;
+        _groundY = groundBounds.max.y;
+
+        _renderers = GetComponentsInChildren<Renderer>();
+        _childColliders = GetComponentsInChildren<BoxCollider>();
+        _block = new MaterialPropertyBlock();
+        _colorId = Shader.PropertyToID("_BaseColor");
+        _targetPosition = transform.position;
+    }
+
+    public void SetTargetPosition(Vector3 groundHitPoint)
+    {
+        _targetPosition = new Vector3(groundHitPoint.x, _groundY + _yOffset, groundHitPoint.z);
     }
 
     private bool CheckValidity()
@@ -60,6 +55,7 @@ public class GhostBase : MonoBehaviour
         foreach (var col in _childColliders)
         {
             Bounds b = col.bounds;
+
             if (b.min.x < _groundBounds.min.x || b.max.x > _groundBounds.max.x ||
                 b.min.z < _groundBounds.min.z || b.max.z > _groundBounds.max.z)
                 return false;
@@ -87,6 +83,7 @@ public class GhostBase : MonoBehaviour
                     return false;
 
                 Loot foundLoot = hit.GetComponentInParent<Loot>();
+
                 if (foundLoot != null && foundLoot.IsRevealed)
                     return false;
 
@@ -94,7 +91,6 @@ public class GhostBase : MonoBehaviour
                     return false;
             }
         }
-
         return true;
     }
 

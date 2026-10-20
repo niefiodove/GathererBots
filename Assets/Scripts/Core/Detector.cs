@@ -11,37 +11,34 @@ public class Detector : MonoBehaviour
     private RaycastHandler _raycastHandler;
     private Vector3 _defaultScale;
     private bool _isScanning = false;
-
+    public void ResetScale() => transform.localScale = _defaultScale;
     public event Action<Loot> LootFound;
 
     private void Awake()
     {
         SceneContext context = FindFirstObjectByType<SceneContext>();
 
-        if (context != null)
+        if (context != null) 
             _raycastHandler = context.RaycastHandler;
     }
 
-    private void Start()
-    {
-        _defaultScale = transform.localScale;
-    }
+    private void Start() => _defaultScale = transform.localScale;
 
     private void OnEnable()
     {
-        if (_raycastHandler != null)
+        if (_raycastHandler != null) 
             _raycastHandler.BaseClicked += OnBaseClicked;
     }
 
     private void OnDisable()
     {
-        if (_raycastHandler != null)
+        if (_raycastHandler != null) 
             _raycastHandler.BaseClicked -= OnBaseClicked;
     }
 
     private void OnBaseClicked(Base clickedBase)
     {
-        if (clickedBase != _ownerBase)
+        if (clickedBase != _ownerBase) 
             return;
 
         StartCoroutineScale();
@@ -51,16 +48,11 @@ public class Detector : MonoBehaviour
     {
         Loot loot = other.GetComponent<Loot>();
 
-        if (loot != null)
+        if (loot != null && !loot.IsRevealed)
         {
             loot.Reveal();
             LootFound?.Invoke(loot);
         }
-    }
-
-    public void ResetScale()
-    {
-        transform.localScale = _defaultScale;
     }
 
     private void StartCoroutineScale()

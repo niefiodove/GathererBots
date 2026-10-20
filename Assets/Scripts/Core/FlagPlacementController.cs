@@ -3,6 +3,7 @@ using UnityEngine;
 public class FlagPlacementController : MonoBehaviour
 {
     private enum PlacementState { Idle, Placing }
+
     [SerializeField] private GhostBase _ghostBasePrefab;
     [SerializeField] private BaseFlag _flagPrefab;
 
@@ -60,8 +61,10 @@ public class FlagPlacementController : MonoBehaviour
 
         _state = PlacementState.Placing;
         _currentBase = baseRef;
+
         _activeGhost = Instantiate(_ghostBasePrefab);
-        _activeGhost.Initialize(_groundCube.bounds, baseRef);
+
+        _activeGhost.Initialize(_groundCube.bounds);
     }
 
     private void CancelPlacing(Vector3 point)
@@ -102,9 +105,7 @@ public class FlagPlacementController : MonoBehaviour
         if (_state == PlacementState.Placing && _activeGhost != null)
         {
             if (GetGroundHitPoint(Input.mousePosition, out Vector3 hitPoint))
-            {
                 _activeGhost.SetTargetPosition(hitPoint);
-            }
         }
     }
 

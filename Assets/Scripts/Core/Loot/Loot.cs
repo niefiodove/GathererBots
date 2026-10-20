@@ -11,6 +11,7 @@ public class Loot : MonoBehaviour
 
     public event Action<Loot> DeliveryFinished;
     public bool IsRevealed { get; private set; } = false;
+
     private Coroutine _fadeCoroutine;
 
     private void Awake()
@@ -22,9 +23,21 @@ public class Loot : MonoBehaviour
         _mover.MovementFinished += HandleMovementFinished;
     }
 
-    private void OnDestroy()
+
+    public void AttachTo(Transform parentTransform, Vector3 localPosition)
     {
-        _mover.MovementFinished -= HandleMovementFinished;
+        transform.SetParent(parentTransform);
+        transform.localPosition = localPosition;
+        transform.localRotation = Quaternion.identity;
+    }
+
+    public void PrepareForSpawn()
+    {
+        _physics.EnableComponents(true);
+        _physics.SetKinematic(true);
+        _visual.Hide();
+        _color.ResetAlpha();
+        IsRevealed = false;
     }
 
     public void Reveal()
@@ -40,30 +53,27 @@ public class Loot : MonoBehaviour
     {
         _physics.SetKinematic(true);
         _physics.EnableComponents(false);
+
+        if (_fadeCoroutine != null) 
+        { 
+            StopCoroutine(_fadeCoroutine); _fadeCoroutine = null;
+        }
+
+        _mover.StopMoving();
     }
 
     public void StartDeliveryAnimation(Transform targetCenter, float duration)
     {
+        if (!gameObject.activeInHierarchy)
+            return;
+
         _mover.MoveTo(targetCenter, duration);
         _fadeCoroutine = StartCoroutine(FadeOutRoutine(duration));
     }
 
-    private IEnumerator FadeOutRoutine(float duration)
+    public void Detach()
     {
-        float timer = 0f;
-
-        while (timer < duration)
-        {
-            timer += Time.deltaTime;
-            float alpha = 1f - (timer / duration);
-            _color.SetAlpha(alpha);
-            yield return null;
-        }
-    }
-
-    private void HandleMovementFinished()
-    {
-        DeliveryFinished?.Invoke(this);
+        transform.SetParent(null);
     }
 
     public void Deactivate()
@@ -79,9 +89,26 @@ public class Loot : MonoBehaviour
 
         transform.SetParent(null);
         _visual.Hide();
-        _physics.SetKinematic(false);
-        _physics.EnableComponents(true);
+
+        _physics.SetKinematic(true);
+        _physics.EnableComponents(false);
+
         _color.ResetAlpha();
         gameObject.SetActive(false);
     }
+
+    private IEnumerator FadeOutRoutine(float duration)
+    {
+        float timer = 0f;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            _color.SetAlpha(1f - (timer / duration));
+            yield return null;
+        }
+    }
+    private void OnDestroy() => _mover.MovementFinished -= HandleMovementFinished;
+
+    private void HandleMovementFinished() => DeliveryFinished?.Invoke(this);
 }

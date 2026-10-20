@@ -37,12 +37,17 @@ public class LootSpawner : Spawner<Loot>
         if (spawnPosition != Vector3.zero)
         {
             Loot loot = GetFromPool();
-            
+
             if (loot != null)
             {
                 loot.transform.position = spawnPosition;
                 loot.transform.rotation = Quaternion.identity;
+
+                loot.PrepareForSpawn();
+
+                loot.DeliveryFinished -= HandleDeliveryFinished;
                 loot.DeliveryFinished += HandleDeliveryFinished;
+
                 loot.gameObject.SetActive(true);
             }
         }
@@ -50,6 +55,9 @@ public class LootSpawner : Spawner<Loot>
 
     private void HandleDeliveryFinished(Loot loot)
     {
+        if (loot == null || !loot.gameObject.activeInHierarchy)
+            return;
+
         loot.DeliveryFinished -= HandleDeliveryFinished;
         loot.Deactivate();
         ReturnToPool(loot);
@@ -64,13 +72,12 @@ public class LootSpawner : Spawner<Loot>
             if (IsDistanceValid(randomPoint))
                 return randomPoint;
         }
-
         return Vector3.zero;
     }
 
     private bool IsDistanceValid(Vector3 point)
     {
-        if (_sceneContext == null)
+        if (_sceneContext == null) 
             return false;
 
         var bases = _sceneContext.RegisteredBases;
@@ -88,7 +95,6 @@ public class LootSpawner : Spawner<Loot>
             if (distanceToBase < _minDistanceFromBase || distanceToBase > _maxDistanceFromBase)
                 return false;
         }
-
         return true;
     }
 
