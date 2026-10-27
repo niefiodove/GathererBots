@@ -6,43 +6,42 @@ public class Base : MonoBehaviour
 {
     [SerializeField] private Transform _lootCenter;
     [SerializeField] private Detector _detector;
-    [SerializeField] private int _droneCost = 3;
-    [SerializeField] private int _expansionCost = 5;
     [SerializeField] private DronSpawner _dronSpawner;
     [SerializeField] private Base _newBasePrefab;
     [SerializeField] private float _deliveryAnimationDuration = 2f;
+    [SerializeField] private ExpansionHandler _expansionHandler;
 
     private List<Dron> _availableDrons = new List<Dron>();
     private Queue<Loot> _lootQueue = new Queue<Loot>();
     private HashSet<Loot> _trackedLoot = new HashSet<Loot>();
 
-    private int _collectedResourcesCount = 0;
-    private int _totalDronesCount = 0;
-    private BaseFlag _flag;
-    private bool _isExpansionPending = false;
-
     public Transform Center => _lootCenter != null ? _lootCenter : transform;
-    public event Action<int> ResourceCountChanged;
-    public bool HasFlag => _flag != null;
-
-    public BaseFlag GetFlag() => _flag;
-    public void SetFlag(BaseFlag flag) => _flag = flag;
-    public void ClearFlag() { _flag = null; _isExpansionPending = false; }
-    public void RemoveDrone() => _totalDronesCount = Mathf.Max(0, _totalDronesCount - 1);
+    public ExpansionHandler ExpansionHandler => _expansionHandler;
     public DronSpawner GetDronSpawner() => _dronSpawner;
+
+    public event Action<int> ResourceCountChanged;
 
     private void Awake()
     {
+        if (_expansionHandler == null)
+            _expansionHandler = GetComponent<ExpansionHandler>();
+
         SceneContext context = FindFirstObjectByType<SceneContext>();
 
         if (context != null)
             context.RegisterBase(this);
     }
 
-    private void Start() 
-    { 
+    private void Start()
+    {
         if (_detector != null)
-            _detector.LootFound += OnLootFound; 
+            _detector.LootFound += OnLootFound;
+
+        if (_expansionHandler != null)
+        {
+            _expansionHandler.ExpansionReady += OnExpansionReady;
+            _expansionHandler.ResourceCountChanged += OnResourceCountChanged;
+        }
     }
 
     private void OnDestroy()
@@ -50,10 +49,21 @@ public class Base : MonoBehaviour
         if (_detector != null)
             _detector.LootFound -= OnLootFound;
 
+        if (_expansionHandler != null)
+        {
+            _expansionHandler.ExpansionReady -= OnExpansionReady;
+            _expansionHandler.ResourceCountChanged -= OnResourceCountChanged;
+        }
+
         SceneContext context = FindFirstObjectByType<SceneContext>();
 
         if (context != null)
             context.UnregisterBase(this);
+    }
+
+    private void OnResourceCountChanged(int count)
+    {
+        ResourceCountChanged?.Invoke(count);
     }
 
     public void RegisterDron(Dron dron)
@@ -61,12 +71,12 @@ public class Base : MonoBehaviour
         if (!_availableDrons.Contains(dron))
             _availableDrons.Add(dron);
 
-        _totalDronesCount++;
-
         dron.DeliveryReady += OnDronDeliveryReady;
         dron.BuildCompleted += OnDronBuildCompleted;
         dron.DroneReturned += OnDronReturned;
 
+        _expansionHandler?.NotifyDroneRegistered();
+        _expansionHandler?.NotifyDroneAvailable();
         TryAssignTasksToFreeDrones();
     }
 
@@ -76,6 +86,7 @@ public class Base : MonoBehaviour
         dron.BuildCompleted -= OnDronBuildCompleted;
         dron.DroneReturned -= OnDronReturned;
         _availableDrons.Remove(dron);
+        _expansionHandler?.NotifyDroneRemoved();
     }
 
     private void OnDronDeliveryReady(Dron dron, Loot loot)
@@ -88,25 +99,26 @@ public class Base : MonoBehaviour
         if (receivedLoot != null)
         {
             _trackedLoot.Remove(receivedLoot);
-            _collectedResourcesCount++;
+
+            _expansionHandler?.NotifyResourceCollected();
 
             if (receivedLoot.gameObject.activeInHierarchy)
                 receivedLoot.StartDeliveryAnimation(Center, _deliveryAnimationDuration);
 
-            CheckForExpansionOrSpawn();
-            ResourceCountChanged?.Invoke(_collectedResourcesCount);
+            TrySpawnDroneIfNeeded();
         }
     }
 
     private void OnDronBuildCompleted(Dron dron)
     {
-        if (_flag == null)
+        if (_expansionHandler == null || !_expansionHandler.HasFlag)
             return;
 
+        BaseFlag flag = _expansionHandler.GetFlag();
         Transform oldSpawnPoint = dron.GetSpawnPoint();
+        GameObject flagObjectToDestroy = flag.gameObject;
+        Vector3 flagPosition = flag.transform.position;
 
-        GameObject flagObjectToDestroy = _flag.gameObject;
-        Vector3 flagPosition = _flag.transform.position;
         Base newBase = Instantiate(_newBasePrefab, flagPosition, Quaternion.identity);
         DronSpawner newSpawner = newBase.GetDronSpawner();
 
@@ -121,10 +133,26 @@ public class Base : MonoBehaviour
 
         UnregisterDron(dron);
         newBase.RegisterDron(dron);
-        RemoveDrone();
 
-        ClearFlag();
+        _expansionHandler.NotifyBuildCompleted();
         Destroy(flagObjectToDestroy);
+    }
+
+    private void OnExpansionReady(BaseFlag flag)
+    {
+        if (!_expansionHandler.ConsumeExpansionResources())
+        {
+            _expansionHandler.NotifyBuildCompleted();
+            return;
+        }
+
+        if (_availableDrons.Count > 0)
+        {
+            Dron builder = _availableDrons[0];
+            _availableDrons.RemoveAt(0);
+            _expansionHandler.NotifyDroneBusy();
+            builder.GoToBuildTarget(flag.transform);
+        }
     }
 
     private void OnDronReturned(Dron dron)
@@ -132,25 +160,26 @@ public class Base : MonoBehaviour
         if (!_availableDrons.Contains(dron))
         {
             _availableDrons.Add(dron);
+            _expansionHandler?.NotifyDroneAvailable();
             TryAssignTasksToFreeDrones();
         }
     }
 
-    private void CheckForExpansionOrSpawn()
+    private void TrySpawnDroneIfNeeded()
     {
-        if (HasFlag && !_isExpansionPending && _collectedResourcesCount >= _expansionCost && _totalDronesCount > 1)
+        if (_expansionHandler == null)
+            return;
+
+        if (_expansionHandler.ShouldPauseDroneProduction())
+            return;
+
+        if (!_expansionHandler.CanAffordDrone())
+            return;
+
+        if (_dronSpawner != null && _dronSpawner.CanSpawnDrone())
         {
-            _collectedResourcesCount -= _expansionCost;
-            _isExpansionPending = true;
-            TryAssignTasksToFreeDrones();
-        }
-        else if ((!HasFlag || _totalDronesCount <= 1) && _collectedResourcesCount >= _droneCost)
-        {
-            if (_dronSpawner != null && _dronSpawner.CanSpawnDrone())
-            {
-                _collectedResourcesCount -= _droneCost;
+            if (_expansionHandler.ConsumeDroneProductionResources())
                 _dronSpawner.SpawnNewDrone();
-            }
         }
     }
 
@@ -166,15 +195,6 @@ public class Base : MonoBehaviour
 
     private void TryAssignTasksToFreeDrones()
     {
-        if (_isExpansionPending && _availableDrons.Count > 0 && _totalDronesCount > 1)
-        {
-            Dron builder = _availableDrons[0];
-            _availableDrons.RemoveAt(0);
-            _isExpansionPending = false;
-            builder.GoToBuildTarget(_flag.transform);
-            return;
-        }
-
         while (_lootQueue.Count > 0 && _availableDrons.Count > 0)
         {
             Loot nextLoot = _lootQueue.Dequeue();
@@ -185,6 +205,7 @@ public class Base : MonoBehaviour
 
             Dron freeDron = _availableDrons[0];
             _availableDrons.RemoveAt(0);
+            _expansionHandler?.NotifyDroneBusy();
             freeDron.GoToLoot(nextLoot);
         }
     }

@@ -10,6 +10,7 @@ public class FlagPlacementController : MonoBehaviour
     private PlacementState _state = PlacementState.Idle;
     private GhostBase _activeGhost;
     private Base _currentBase;
+    private ExpansionHandler _currentExpansionHandler;
     private Camera _camera;
     private GameObject _groundObject;
     private BoxCollider _groundCube;
@@ -59,44 +60,45 @@ public class FlagPlacementController : MonoBehaviour
         if (_state != PlacementState.Idle)
             return;
 
+        _currentExpansionHandler = baseRef.ExpansionHandler;
+
+        if (_currentExpansionHandler == null)
+            return;
+
         _state = PlacementState.Placing;
         _currentBase = baseRef;
-
         _activeGhost = Instantiate(_ghostBasePrefab);
-
         _activeGhost.Initialize(_groundCube.bounds);
     }
 
     private void CancelPlacing(Vector3 point)
     {
-        if (_state != PlacementState.Placing)
-            return;
-
+        if (_state != PlacementState.Placing) return;
         Cleanup();
     }
 
     private void HandleMouseClick(Vector2 screenPosition)
     {
-        if (_state != PlacementState.Placing || _activeGhost == null || _currentBase == null)
+        if (_state != PlacementState.Placing || _activeGhost == null ||
+            _currentBase == null || _currentExpansionHandler == null)
             return;
-
-        Vector3 flagPosition = _activeGhost.transform.position;
 
         if (_activeGhost.IsValid)
         {
-            if (_currentBase.HasFlag)
+            Vector3 flagPosition = _activeGhost.transform.position;
+
+            if (_currentExpansionHandler.HasFlag)
             {
-                BaseFlag existingFlag = _currentBase.GetFlag();
+                BaseFlag existingFlag = _currentExpansionHandler.GetFlag();
                 existingFlag.PlaceAt(flagPosition);
             }
             else
             {
                 BaseFlag newFlag = Instantiate(_flagPrefab);
                 newFlag.PlaceAt(flagPosition);
-                _currentBase.SetFlag(newFlag);
+                _currentExpansionHandler.SetFlag(newFlag);
             }
         }
-
         Cleanup();
     }
 
@@ -112,7 +114,6 @@ public class FlagPlacementController : MonoBehaviour
     private bool GetGroundHitPoint(Vector2 screenPos, out Vector3 hitPoint)
     {
         hitPoint = Vector3.zero;
-
         if (_camera == null)
             return false;
 
@@ -131,7 +132,6 @@ public class FlagPlacementController : MonoBehaviour
                 return true;
             }
         }
-
         return false;
     }
 
@@ -142,8 +142,8 @@ public class FlagPlacementController : MonoBehaviour
             Destroy(_activeGhost.gameObject);
             _activeGhost = null;
         }
-
         _currentBase = null;
+        _currentExpansionHandler = null;
         _state = PlacementState.Idle;
     }
 }

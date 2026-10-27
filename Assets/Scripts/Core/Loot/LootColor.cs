@@ -8,14 +8,13 @@ public class LootColor : MonoBehaviour
     private const float FullAlpha = 1f;
 
     private MaterialPropertyBlock _materialPropertyBlock;
-    private int _colorId;
+    private int _colorId = Shader.PropertyToID("_BaseColor");
     private Color _originalColor;
 
     private void Awake()
     {
         _meshRenderer = GetComponent<MeshRenderer>();
         _materialPropertyBlock = new MaterialPropertyBlock();
-        _colorId = Shader.PropertyToID("_BaseColor");
         _originalColor = _meshRenderer.sharedMaterial.GetColor(_colorId);
     }
 
